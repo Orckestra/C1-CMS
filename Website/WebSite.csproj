@@ -11,7 +11,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>Composite</RootNamespace>
     <AssemblyName>Composite.Website</AssemblyName>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <SccProjectName>SAK</SccProjectName>
     <SccLocalPath>SAK</SccLocalPath>
     <SccAuxPath>SAK</SccAuxPath>

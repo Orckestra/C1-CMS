@@ -351,6 +351,7 @@ namespace Composite.Core.WebClient
 
                 ServiceLocator.BuildServiceProvider();
                 ServiceLocator.CreateRequestServicesScope(HttpContext.Current);
+                HttpRuntime.WebObjectActivator = new WebObjectActivator(ServiceLocator.ServiceProvider);
 
                 ApplicationStartupFacade.FireBeforeSystemInitialize(ServiceLocator.ServiceProvider);
             }
