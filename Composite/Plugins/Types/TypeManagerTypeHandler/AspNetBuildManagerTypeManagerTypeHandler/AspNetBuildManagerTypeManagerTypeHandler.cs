@@ -9,62 +9,66 @@ using System.Web.Hosting;
 
 
 namespace Composite.Plugins.Types.TypeManagerTypeHandler.AspNetBuildManagerTypeManagerTypeHandler
-{    
+{
     [ConfigurationElementType(typeof(AspNetBuildManagerTypeManagerTypeHandlerData))]
     internal sealed class AspNetBuildManagerTypeManagerTypeHandler : ITypeManagerTypeHandler
     {
-        private const string _typeNamePrefix = "AspNetType:";
+        private static Assembly _globalResourcesAssembly;
+        private static bool _assemblyFetchedOnce;
+        private const string TYPE_NAME_PREFIX = "AspNetType:";
 
         public Type GetType(string fullName)
         {
-            if (!HostingEnvironment.IsHosted) return null;
-
-            string name = fullName;
-
-            if (name.StartsWith(_typeNamePrefix))
-            {
-                name = name.Remove(0, _typeNamePrefix.Length);
-            }
-
-            if(name.Contains(":"))
-            {
+            if (!HostingEnvironment.IsHosted)
                 return null;
+
+            var name = fullName;
+
+            if (name.StartsWith(TYPE_NAME_PREFIX))
+            {
+                name = name.Remove(0, TYPE_NAME_PREFIX.Length);
             }
 
-            return BuildManager.GetType(name, false, true);
+            return name.Contains(":") ? null : GetTypeFromName(name);
         }
 
+        private static Type GetTypeFromName(string name)
+        {
+            var typeFromGlobalResources = GetGlobalResourcesAssembly()?.GetType(name, false, true);
+            return typeFromGlobalResources != null ? typeFromGlobalResources : BuildManager.GetType(name, false, true);
+        }
+
+        private static Assembly GetGlobalResourcesAssembly()
+        {
+            if (_globalResourcesAssembly != null || _assemblyFetchedOnce)
+                return _globalResourcesAssembly;
+
+            _globalResourcesAssembly = BuildManager.GetReferencedAssemblies().OfType<Assembly>()
+                .FirstOrDefault(assembly => assembly.FullName.StartsWith("App_GlobalResources"));
+            _assemblyFetchedOnce = true;
+
+            return _globalResourcesAssembly;
+        }
 
         public string SerializeType(Type type)
         {
-            if (!HostingEnvironment.IsHosted) return null;
+            if (!HostingEnvironment.IsHosted)
+                return null;
 
-            if (BuildManager.CodeAssemblies != null)
-            {
-                foreach (object obj in BuildManager.CodeAssemblies)
-                {
-                    Assembly assembly = obj as Assembly;
+            if (BuildManager.CodeAssemblies == null)
+                return null;
 
-                    if (assembly != null)
-                    {
-                        if (assembly.GetTypes().Contains(type))
-                        {
-                            return string.Format("{0}{1}", _typeNamePrefix, type.FullName);
-                        }
-                    }
-                }
-            }
-            
-            return null;
+            return BuildManager.CodeAssemblies.OfType<Assembly>().Any(assembly => assembly.GetTypes().Contains(type))
+                ? $"{TYPE_NAME_PREFIX}{type.FullName}"
+                : null;
         }
-
-
 
         public bool HasTypeWithName(string typeFullname)
         {
-            if (!HostingEnvironment.IsHosted) return false;
+            if (!HostingEnvironment.IsHosted)
+                return false;
 
-            return BuildManager.GetType(typeFullname, false, true) != null;
+            return GetTypeFromName(typeFullname) != null;
         }
     }
 
