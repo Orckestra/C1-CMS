@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text;
 using System.Web;
@@ -47,7 +47,11 @@ namespace Composite.Plugins.Routing.MediaUrlProviders
                 return null;
             }
 
-            string pathToFile = UrlUtils.Combine(file.FolderPath, file.FileName);
+            var fileName = resizingOptions != null && string.Equals(resizingOptions.FileExtension, ImageResizer.WebP, StringComparison.InvariantCultureIgnoreCase)
+                ? $"{Path.GetFileNameWithoutExtension(file.FileName)}.{ImageResizer.WebP}"
+                : file.FileName;
+
+            string pathToFile = UrlUtils.Combine(file.FolderPath, fileName);
 
             pathToFile = RemoveForbiddenCharactersAndNormalize(pathToFile);
 

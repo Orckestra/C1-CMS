@@ -181,9 +181,18 @@ public class ShowMedia : IHttpHandler, IReadOnlySessionState
             return;
         }
 
-        context.Response.ContentType = GetMimeType(file);
+        var resizingOptions = ResizingOptions.Parse(context.Request.QueryString);
+        var isWebP = resizingOptions.FileExtension == ImageResizer.WebP;
+
+        context.Response.ContentType = isWebP ? "image/webp" : GetMimeType(file);
 
         string encodedFileName = file.FileName.Replace("\"", "_");
+
+        if (isWebP)
+        {
+            encodedFileName = Path.ChangeExtension(encodedFileName, ".webp");
+        }
+
         if (context.Request.Browser != null && context.Request.Browser.IsBrowser("ie"))
         {
             // Unicode characters have to be url-encoded for IE
@@ -223,7 +232,7 @@ public class ShowMedia : IHttpHandler, IReadOnlySessionState
             if (file.MimeType == "image/jpeg" || file.MimeType == "image/gif" || file.MimeType == "image/png"
                 || file.MimeType == "image/bmp" || file.MimeType == "image/tiff")
             {
-                source = ProcessImageResizing(context, file);
+                source = ProcessImageResizing(context, file, resizingOptions);
             }
             else
             {
@@ -428,7 +437,7 @@ public class ShowMedia : IHttpHandler, IReadOnlySessionState
 
                 if (beginOffset == null)
                 {
-                    Verify.That(endOffset <= streamLength, "The segment is bigger than the lenght of the file");
+                    Verify.That(endOffset <= streamLength, "The segment is bigger than the length of the file");
 
                     result.Add(new Range(streamLength - endOffset.Value, endOffset.Value));
                     continue;
@@ -527,10 +536,8 @@ public class ShowMedia : IHttpHandler, IReadOnlySessionState
         }
     }
 
-    private static FileOrStream ProcessImageResizing(HttpContext context, IMediaFile file)
+    private static FileOrStream ProcessImageResizing(HttpContext context, IMediaFile file, ResizingOptions resizingOptions)
     {
-        var resizingOptions = ResizingOptions.Parse(context.Request.QueryString);
-
         if (resizingOptions == null || resizingOptions.IsEmpty)
         {
             return new FileOrStream(file);

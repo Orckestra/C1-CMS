@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
@@ -71,9 +71,14 @@ namespace Composite.Core.WebClient.Media
         }
 
         /// <summary>
-        /// Resizing action
+        /// FileExtension (for .webp extension)
         /// </summary>
-        public ResizingAction ResizingAction { get; set; }
+        public string FileExtension { get; set; }
+
+    /// <summary>
+    /// Resizing action
+    /// </summary>
+    public ResizingAction ResizingAction { get; set; }
 
         /// <summary>
         /// Indicates whether any options were specified
@@ -175,6 +180,12 @@ namespace Composite.Core.WebClient.Media
                 result.Quality = int.Parse(str);
             }
 
+            str = queryString["ext"];
+            if (!string.IsNullOrEmpty(str))
+            {
+                result.FileExtension = str;
+            }
+
             var action = queryString["action"];
             if (!string.IsNullOrEmpty(action) && Enum.TryParse(action, true, out ResizingAction resizingAction))
             {
@@ -234,7 +245,7 @@ namespace Composite.Core.WebClient.Media
         {
             var sb = new StringBuilder();
             var parameters = new[] { Width, Height, MaxWidth, MaxHeight, _qualityOverride };
-            var parameterNames = new[] { "w", "h", "mw", "mh", "q" };
+            var parameterNames = new[] { "w", "h", "mw", "mh", "q"};
 
             for (var i = 0; i < parameters.Length; i++)
             {
@@ -245,6 +256,12 @@ namespace Composite.Core.WebClient.Media
 
                 sb.Append(sb.Length == 0 ? String.Empty : "&");
                 sb.Append(parameterNames[i]).Append("=").Append((int)parameters[i]);
+            }
+
+            if (string.Equals(FileExtension, "webp", StringComparison.InvariantCultureIgnoreCase))
+            {
+                sb.Append(sb.Length == 0 ? String.Empty : "&");
+                sb.Append("ext=webp");
             }
 
             if (ResizingAction != ResizingAction.Stretch)

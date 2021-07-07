@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -10,6 +10,8 @@ using System.Web.Caching;
 using Composite.Core.IO;
 using Composite.Data.Plugins.DataProvider.Streams;
 using Composite.Data.Types;
+using ImageProcessor;
+using ImageProcessor.Plugins.WebP.Imaging.Formats;
 
 namespace Composite.Core.WebClient.Media
 {
@@ -21,6 +23,7 @@ namespace Composite.Core.WebClient.Media
     public static class ImageResizer
     {
         private const string ResizedImagesCacheDirectory = "~/App_Data/Composite/Cache/Resized images";
+        public const string WebP = "webp";
         private static Dictionary<ImageFormat, string> _ImageFormat2Extension = new Dictionary<ImageFormat, string>
         {  
             {ImageFormat.Png, "png"},
@@ -107,7 +110,7 @@ namespace Composite.Core.WebClient.Media
 
                 string centerCroppedString = centerCrop ? "c" : string.Empty;
 
-                string fileExtension = _ImageFormat2Extension[targetImageFormat];
+                string fileExtension = string.Equals(resizingOptions.FileExtension, WebP, StringComparison.InvariantCultureIgnoreCase) ? WebP : _ImageFormat2Extension[targetImageFormat];
                 string resizedImageFileName = string.Format("{0}x{1}_{2}{3}_{4}.{5}", newWidth, newHeight, filePathHash, centerCroppedString, resizingOptions.Quality, fileExtension);
 
                 string imageFullPath = Path.Combine(_resizedImagesDirectoryPath, resizedImageFileName);
@@ -120,7 +123,7 @@ namespace Composite.Core.WebClient.Media
                         bitmap = new Bitmap(fileStream);
                     }
 
-                    ResizeImage(bitmap, imageFullPath, newWidth, newHeight, centerCrop, targetImageFormat, resizingOptions.Quality);
+                    ResizeImage(bitmap, imageFullPath, newWidth, newHeight, centerCrop, targetImageFormat, resizingOptions.Quality, resizingOptions.FileExtension);
 
                     if (file.LastWriteTime.HasValue)
                     {
@@ -256,17 +259,27 @@ namespace Composite.Core.WebClient.Media
         }
 
 
-        private static void ResizeImage(Bitmap image, string outputFilePath, int newWidth, int newHeight, bool centerCrop, ImageFormat imageFormat, int quality)
+        private static void ResizeImage(Bitmap image, string outputFilePath, int newWidth, int newHeight, bool centerCrop, ImageFormat imageFormat, int quality, string fileExtension)
         {
             using (Bitmap resizedImage = ResizeImage(image, newWidth, newHeight, centerCrop))
             {
-                if (imageFormat.Guid == ImageFormat.Jpeg.Guid)
+                if (string.Equals(fileExtension, WebP, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    EncoderParameters parameters = new EncoderParameters(1);
-
-                    // Setting image quality, the deafult value is 75
-                    parameters.Param[0] = new EncoderParameter(
-                        System.Drawing.Imaging.Encoder.Quality, quality);
+                    using (var webPFileStream = new FileStream(outputFilePath, FileMode.Create))
+                    {
+                        using (ImageFactory imageFactory = new ImageFactory(preserveExifData: false))
+                        {
+                            imageFactory.Load(resizedImage)
+                                .Format(new WebPFormat())
+                                .Quality(quality)
+                                .Save(webPFileStream);
+                        }
+                    }
+                }
+                else if (imageFormat.Guid == ImageFormat.Jpeg.Guid)
+                {
+                    // Setting image quality, the default value is 75
+                    EncoderParameters parameters = new EncoderParameters(1) { Param = { [0] = new EncoderParameter(Encoder.Quality, quality) } };
 
                     resizedImage.Save(outputFilePath, JpegCodecInfo, parameters);
                 }

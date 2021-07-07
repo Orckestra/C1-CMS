@@ -59,6 +59,9 @@ namespace Composite.Core.IO
         public static string Tiff => "image/tiff";
 
         /// <exclude />
+        public static string WebP => "image/webp";
+
+        /// <exclude />
         public static string Css => "text/css";
 
         /// <exclude />
@@ -150,6 +153,8 @@ namespace Composite.Core.IO
 
             _toCanonical.Add("image/x-png", Png);
             RegisterMimeType(MimeTypeInfo.Png, "png", "mimetype-png", true);
+
+            RegisterMimeType(MimeTypeInfo.WebP, "webp", "mimetype-webp", true);
 
             RegisterMimeType(MimeTypeInfo.Svg, "svg", "mimetype-svg", true);
 
